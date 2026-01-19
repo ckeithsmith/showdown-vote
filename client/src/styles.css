@@ -188,3 +188,62 @@ html, body {
 .footer {
   padding: 14px 4px;
 }
+
+.list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.roundBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.roundTitle {
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.rowMain {
+  display: grid;
+  gap: 6px;
+}
+
+.rowTitle {
+  font-weight: 900;
+}
+
+.rowSub {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.rowRight {
+  font-weight: 900;
+  align-self: center;
+  opacity: 0.9;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  margin-right: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.redTag { background: rgba(232, 59, 59, 0.25); }
+.blueTag { background: rgba(46, 115, 255, 0.25); }
