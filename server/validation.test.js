@@ -16,7 +16,7 @@ test('registerSchema rejects invalid email', () => {
 test('voteSchema accepts valid input', () => {
   const res = voteSchema.safeParse({
     userId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
-    showdownId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+    showdownId: 'a07xxxxxxxxxxxxxxx',
     choice: 'RED',
   });
   assert.equal(res.success, true);

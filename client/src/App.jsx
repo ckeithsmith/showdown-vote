@@ -20,22 +20,52 @@ function saveJson(key, value) {
 export default function App() {
   const [profile, setProfile] = useState(() => loadJson(PROFILE_KEY));
   const [votes, setVotes] = useState(() => loadJson(VOTES_KEY) || {});
-  const [showdown, setShowdown] = useState(null);
+  const [currentState, setCurrentState] = useState(null);
   const [loadingShowdown, setLoadingShowdown] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const contest = currentState?.contest || null;
+  const showdown = currentState?.showdown || null;
+
   const existingChoice = useMemo(() => {
-    if (!showdown?.showdownId) return null;
-    return votes[showdown.showdownId] || null;
+    if (!showdown?.id) return null;
+    return votes[showdown.id] || null;
   }, [showdown, votes]);
+
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  function parseTime(v) {
+    if (!v) return null;
+    const ms = new Date(v).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  const voteOpenMs = parseTime(showdown?.voteOpenTime);
+  const voteCloseMs = parseTime(showdown?.voteCloseTime);
+  const inWindow =
+    (voteOpenMs === null || nowMs >= voteOpenMs) &&
+    (voteCloseMs === null || nowMs <= voteCloseMs);
+  const statusAllows = showdown?.status === 'VOTING_OPEN';
+  const votingOpen = Boolean(showdown?.id && statusAllows && inWindow);
+
+  function fmtCountdown(msLeft) {
+    const s = Math.max(0, Math.floor(msLeft / 1000));
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
 
   async function refreshShowdown() {
     setLoadingShowdown(true);
     setError('');
     try {
-      const data = await apiGet('/api/current-showdown');
-      setShowdown(data);
+      const data = await apiGet('/api/current-state');
+      setCurrentState(data);
     } catch {
       setError('Could not load matchup. Please try again.');
     } finally {
@@ -71,16 +101,16 @@ export default function App() {
   }
 
   async function castVote(choice) {
-    if (!profile?.userId || !showdown?.showdownId) return;
+    if (!profile?.userId || !showdown?.id) return;
     setSubmitting(true);
     setError('');
     try {
       await apiPost('/api/vote', {
         userId: profile.userId,
-        showdownId: showdown.showdownId,
+        showdownId: showdown.id,
         choice,
       });
-      const nextVotes = { ...votes, [showdown.showdownId]: choice };
+      const nextVotes = { ...votes, [showdown.id]: choice };
       saveJson(VOTES_KEY, nextVotes);
       setVotes(nextVotes);
     } catch (e) {
@@ -150,21 +180,33 @@ export default function App() {
 
           {loadingShowdown ? (
             <div className="muted">Loading…</div>
-          ) : showdown?.showdownId ? (
+          ) : showdown?.id ? (
             <>
+              <div className="muted small">
+                <div><strong>{contest?.name || 'Contest'}</strong></div>
+                <div>
+                  {contest?.currentRound ? `Round: ${contest.currentRound}` : null}
+                  {showdown?.matchNumber ? ` • Match: ${showdown.matchNumber}` : null}
+                </div>
+              </div>
+
               <div className="matchup">
                 <div className="side red">
                   <div className="sideLabel">RED</div>
-                  <div className="name">{showdown.red}</div>
+                  <div className="name">
+                    {showdown.red?.leadName || '—'} &amp; {showdown.red?.followName || '—'}
+                  </div>
                 </div>
                 <div className="vs">vs</div>
                 <div className="side blue">
                   <div className="sideLabel">BLUE</div>
-                  <div className="name">{showdown.blue}</div>
+                  <div className="name">
+                    {showdown.blue?.leadName || '—'} &amp; {showdown.blue?.followName || '—'}
+                  </div>
                 </div>
               </div>
 
-              {showdown.status !== 'OPEN' ? (
+              {!votingOpen ? (
                 <div className="status">Voting closed</div>
               ) : existingChoice ? (
                 <div className="status">
@@ -174,12 +216,22 @@ export default function App() {
                 <div className="status muted">Tap to vote</div>
               )}
 
+              {votingOpen && voteCloseMs ? (
+                <div className="muted small">Closes in {fmtCountdown(voteCloseMs - nowMs)}</div>
+              ) : null}
+
+              {contest?.resultsVisibility === 'PUBLIC' && showdown?.winner ? (
+                <div className="status">
+                  Winner: <strong>{showdown.winner}</strong>
+                </div>
+              ) : null}
+
               <div className="buttons">
                 <button
                   className="vote redBtn"
                   type="button"
                   onClick={() => castVote('RED')}
-                  disabled={submitting || showdown.status !== 'OPEN'}
+                  disabled={submitting || !votingOpen}
                 >
                   Vote Red
                 </button>
@@ -187,13 +239,13 @@ export default function App() {
                   className="vote blueBtn"
                   type="button"
                   onClick={() => castVote('BLUE')}
-                  disabled={submitting || showdown.status !== 'OPEN'}
+                  disabled={submitting || !votingOpen}
                 >
                   Vote Blue
                 </button>
               </div>
 
-              {existingChoice && showdown.status === 'OPEN' ? (
+              {existingChoice && votingOpen ? (
                 <div className="muted small">You can change your vote by tapping the other button.</div>
               ) : null}
             </>
