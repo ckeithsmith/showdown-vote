@@ -144,7 +144,7 @@ export default function App() {
             {matches.map((m) => (
               <div key={m.id} className="row">
                 <div className="rowMain">
-                  <div className="rowTitle">{m.matchNumber ? `Match ${m.matchNumber}` : 'Match'}</div>
+                  <div className="rowTitle">{m.matchNumber ? `Match: ${m.matchNumber}` : 'Match'}</div>
                   <div className="rowSub">
                     <span className="tag redTag">RED</span> {coupleLabel(m.red)}
                   </div>
