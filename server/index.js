@@ -23,6 +23,7 @@ async function start() {
 
   const app = express();
   app.disable('x-powered-by');
+  app.disable('etag');
 
   const corsOrigins = parseCorsOrigins();
   app.use(
@@ -330,6 +331,10 @@ async function start() {
   });
 
   app.get('/api/public/state', async (req, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const state = await query('SELECT active_contest_id FROM sf_app_state WHERE id=1');
     const activeContestId = state.rows[0]?.active_contest_id || null;
     if (!activeContestId) {
