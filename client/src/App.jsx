@@ -25,9 +25,14 @@ export default function App() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const contest = currentState?.contest || null;
-  const contestStatus = currentState?.contestStatus || contest?.status || null;
-  const activeShowdown = currentState?.activeShowdown || null;
+  const activeContestId = currentState?.activeContestId ?? null;
+  const snapshot = currentState?.snapshot ?? null;
+
+  const contest = snapshot?.contest || null;
+  const contestStatus = snapshot?.contestStatus || contest?.status || null;
+  const activeShowdown = snapshot?.activeShowdown || null;
+  const judgePanelSize = snapshot?.judgePanelSize ?? 0;
+  const audienceEnabled = snapshot?.audienceEnabled;
 
   const existingChoice = useMemo(() => {
     if (!activeShowdown?.id) return null;
@@ -35,21 +40,29 @@ export default function App() {
   }, [activeShowdown, votes]);
 
 
-  async function refreshShowdown() {
-    setLoadingShowdown(true);
+  async function loadState({ showLoading } = { showLoading: false }) {
+    if (showLoading) setLoadingShowdown(true);
     setError('');
     try {
       const data = await apiGet('/api/public/state');
       setCurrentState(data);
     } catch {
-      setError('Could not load matchup. Please try again.');
+      setError('Could not load live state. Please try again.');
     } finally {
-      setLoadingShowdown(false);
+      if (showLoading) setLoadingShowdown(false);
     }
   }
 
+  async function refreshShowdown() {
+    await loadState({ showLoading: true });
+  }
+
   useEffect(() => {
-    refreshShowdown();
+    loadState({ showLoading: true });
+    const t = setInterval(() => {
+      loadState({ showLoading: false });
+    }, 2000);
+    return () => clearInterval(t);
   }, []);
 
   async function onRegister(e) {
@@ -126,7 +139,7 @@ export default function App() {
   }
 
   function renderBracket() {
-    const bracket = Array.isArray(currentState?.bracket) ? currentState.bracket : [];
+    const bracket = Array.isArray(snapshot?.bracket) ? snapshot.bracket : [];
     if (!bracket.length) return <div className="muted">Bracket not available yet.</div>;
 
     const byRound = new Map();
@@ -162,7 +175,7 @@ export default function App() {
   }
 
   function renderPairings() {
-    const pairings = Array.isArray(currentState?.pairings) ? currentState.pairings : [];
+    const pairings = Array.isArray(snapshot?.pairings) ? snapshot.pairings : [];
     if (!pairings.length) return <div className="muted">Pairings not available yet.</div>;
     return (
       <div className="list">
@@ -174,6 +187,38 @@ export default function App() {
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  function renderJudgePanel(judges) {
+    if (judgePanelSize === 0) return <div className="muted">Judges not used for this contest.</div>;
+    if (![1, 3, 5].includes(judgePanelSize)) return <div className="muted">Judge panel not configured.</div>;
+
+    const bySeat = new Map();
+    if (Array.isArray(judges)) {
+      for (const j of judges) {
+        const seat = j?.seat;
+        if (seat == null) continue;
+        bySeat.set(String(seat), j);
+      }
+    }
+
+    const seats = Array.from({ length: judgePanelSize }, (_, i) => String(i + 1));
+    return (
+      <div className="list">
+        {seats.map((seat) => {
+          const j = bySeat.get(seat) || null;
+          return (
+            <div key={seat} className="row">
+              <div className="rowMain">
+                <div className="rowTitle">Judge Seat {seat}</div>
+                <div className="rowSub">{j?.name ?? '—'}</div>
+              </div>
+              <div className="rowRight">{j?.choice ?? '—'}</div>
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -286,7 +331,7 @@ export default function App() {
           {header}
           {matchup}
           <div className="status">Audience Results</div>
-          {contest?.judgingModel === 'Judges_Only' ? (
+          {audienceEnabled === false ? (
             <div className="muted">Audience results not used for this contest.</div>
           ) : activeShowdown.redAudienceVotes != null || activeShowdown.blueAudienceVotes != null ? (
             <div className="list">
@@ -305,27 +350,13 @@ export default function App() {
     }
 
     if (status === 'JUDGES_RESULT_REVEALED') {
-      const judges = currentState?.raw?.activeShowdown?.judges;
+      const judges = activeShowdown?.judges;
       return (
         <>
           {header}
           {matchup}
           <div className="status">Judges Results</div>
-          {Array.isArray(judges) && judges.length ? (
-            <div className="list">
-              {judges.map((j, idx) => (
-                <div key={idx} className="row">
-                  <div className="rowMain">
-                    <div className="rowTitle">{j.seat ?? `Judge ${idx + 1}`}</div>
-                    <div className="rowSub">{j.name ?? 'Judge'}</div>
-                  </div>
-                  <div className="rowRight">{j.choice ?? '—'}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="muted">Judge breakdown not available yet.</div>
-          )}
+          {renderJudgePanel(judges)}
         </>
       );
     }
@@ -388,6 +419,9 @@ export default function App() {
             <div>
               Voting as <strong>{profile.name}</strong>
             </div>
+            {activeContestId ? (
+              <div className="muted small">Active Contest: {activeContestId}</div>
+            ) : null}
             <div className="metaActions">
               <button className="link" type="button" onClick={editProfile}>
                 Edit profile
@@ -402,8 +436,8 @@ export default function App() {
 
           {loadingShowdown ? (
             <div className="muted">Loading…</div>
-          ) : !contest ? (
-            <div className="muted">No active contest.</div>
+          ) : !snapshot ? (
+            <div className="muted">Waiting for contest configuration.</div>
           ) : contestStatus === 'SIGNUP_OPEN' ? (
             <>
               <div className="status">Sign Ups Open</div>
