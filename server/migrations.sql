@@ -97,12 +97,16 @@ CREATE INDEX IF NOT EXISTS sf_state_raw_contest_received_idx
 CREATE TABLE IF NOT EXISTS sf_app_state (
   id int PRIMARY KEY CHECK (id = 1),
   active_contest_id text NULL,
+  contest_snapshot_json jsonb NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 INSERT INTO sf_app_state (id, active_contest_id)
 VALUES (1, NULL)
 ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE sf_app_state
+  ADD COLUMN IF NOT EXISTS contest_snapshot_json jsonb NULL;
 
 -- Votes keyed by Salesforce showdown id (keep legacy vote table untouched)
 CREATE TABLE IF NOT EXISTS vote_sf (
