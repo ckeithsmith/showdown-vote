@@ -45,6 +45,8 @@ CREATE TABLE IF NOT EXISTS sf_contest (
   current_round__c text NULL,
   active_showdown__c text NULL,
   judging_model__c text NULL,
+  judge_panel_size__c text NULL,
+  event__c text NULL,
   results_visibility__c text NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS sf_contest (
 CREATE TABLE IF NOT EXISTS sf_showdown (
   id text PRIMARY KEY,
   contest__c text NULL,
+  name text NULL,
   status__c text NULL,
   round__c text NULL,
   match_number__c text NULL,
@@ -80,6 +83,16 @@ CREATE TABLE IF NOT EXISTS sf_dancer (
   name text NULL,
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE TABLE IF NOT EXISTS sf_state_raw (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contest_id text NULL,
+  received_at timestamptz NOT NULL DEFAULT now(),
+  payload jsonb NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS sf_state_raw_contest_received_idx
+  ON sf_state_raw (contest_id, received_at DESC);
 
 CREATE TABLE IF NOT EXISTS sf_app_state (
   id int PRIMARY KEY CHECK (id = 1),

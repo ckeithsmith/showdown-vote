@@ -11,49 +11,8 @@ const voteSchema = z.object({
   choice: z.enum(['RED', 'BLUE']),
 });
 
-const sfIngestSchema = z.object({
-  contest: z
-    .object({
-      id: z.string().min(15).max(18),
-      name: z.string().optional().nullable(),
-      status: z.string().optional().nullable(),
-      currentRound: z.string().optional().nullable(),
-      activeShowdownId: z.string().min(15).max(18).optional().nullable(),
-      judgingModel: z.string().optional().nullable(),
-      resultsVisibility: z.string().optional().nullable(),
-    })
-    .strict(),
-  showdown: z
-    .object({
-      id: z.string().min(15).max(18),
-      status: z.string().optional().nullable(),
-      round: z.string().optional().nullable(),
-      matchNumber: z.string().optional().nullable(),
-      voteOpenTime: z.string().datetime().optional().nullable(),
-      voteCloseTime: z.string().datetime().optional().nullable(),
-      red: z
-        .object({
-          coupleId: z.string().min(15).max(18).optional().nullable(),
-          leadId: z.string().min(15).max(18).optional().nullable(),
-          followId: z.string().min(15).max(18).optional().nullable(),
-          leadName: z.string().optional().nullable(),
-          followName: z.string().optional().nullable(),
-        })
-        .strict(),
-      blue: z
-        .object({
-          coupleId: z.string().min(15).max(18).optional().nullable(),
-          leadId: z.string().min(15).max(18).optional().nullable(),
-          followId: z.string().min(15).max(18).optional().nullable(),
-          leadName: z.string().optional().nullable(),
-          followName: z.string().optional().nullable(),
-        })
-        .strict(),
-      winner: z.enum(['RED', 'BLUE']).optional().nullable(),
-      redAudienceVotes: z.number().optional().nullable(),
-      blueAudienceVotes: z.number().optional().nullable(),
-    })
-    .strict(),
-});
+const ingestStateSchema = z
+  .record(z.unknown())
+  .refine((v) => v && typeof v === 'object' && !Array.isArray(v), 'object');
 
-module.exports = { registerSchema, voteSchema, sfIngestSchema };
+module.exports = { registerSchema, voteSchema, ingestStateSchema };
