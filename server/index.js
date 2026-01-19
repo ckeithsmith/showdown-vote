@@ -106,7 +106,7 @@ async function start() {
         name: s.Name || s.name || null,
         status: s.Status__c || s.status__c || s.status || null,
         round: s.Round__c || s.round__c || s.round || null,
-        matchNumber: s.matchNumber || null,
+        matchNumber: s.Match_Number__c ?? null,
         voteOpenTime: s.Vote_Open_Time__c || s.vote_open_time__c || s.voteOpenTime || null,
         voteCloseTime: s.Vote_Close_Time__c || s.vote_close_time__c || s.voteCloseTime || null,
         redCoupleId: s.Red_Couple__c || s.red_couple__c || null,
